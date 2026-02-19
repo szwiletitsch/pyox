@@ -69,26 +69,18 @@ class Grammar:
             changed = False
             for lhs, productions in self.productions.items():
                 for rhs in productions:
-                    # 1) 'A -> alpha N' or 'A -> alpha N' -> add follow(A) to follow(N)
-                    if len(rhs) != 0 and rhs[-1] in self.nonterminals:
-                        b4 = len(self.follow_sets[rhs[-1]])
-                        self.follow_sets[rhs[-1]] |= self.follow_sets[lhs]
-                        if len(self.follow_sets[rhs[-1]]) != b4:
-                            changed = True
+                    trailer = self.follow_sets[lhs].copy()
 
-                    # 2) 'A -> alpha N beta' or 'A -> N beta' -> add first(beta) to follow(N)
-                    rest_nullable = True
-                    for N, beta in [(rhs[i-1], rhs[i]) for i in range(len(rhs) - 1, 0, -1)]:
-                        b4 = -1
-                        if N in self.nonterminals:
-                            b4 = len(self.follow_sets[N])
-                            self.follow_sets[N] |= (self.first_sets[beta] - {"ε"})
+                    for symbol in reversed(rhs):
+                        if symbol in self.nonterminals:
+                            b4 = len(self.follow_sets[symbol])
+                            self.follow_sets[symbol] |= trailer
+                            if len(self.follow_sets[symbol]) > b4:
+                                changed = True
 
-                        # if everything behind N can produce epsilon -> add follow(A) to follow(N)
-                        if "ε" not in self.first_sets[beta]:
-                            rest_nullable = False
-                        if rest_nullable:
-                            self.follow_sets[N] |= self.follow_sets[lhs]
-
-                        if N in self.nonterminals and len(self.follow_sets[N]) != b4:
-                            changed = True
+                            if "ε" in self.first_sets[symbol]:
+                                trailer |= (self.first_sets[symbol] - {"ε"})
+                            else:
+                                trailer = self.first_sets[symbol] - {"ε"}
+                        else:
+                            trailer = {symbol}

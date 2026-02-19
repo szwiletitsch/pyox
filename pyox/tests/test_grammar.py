@@ -72,7 +72,7 @@ class TestGrammar(unittest.TestCase):
             'FACTOR': {')', '$', '+', '-', '*', '/'}
         }
 
-        self.assertEqual(expected_follow_sets, self.gram_simple.follow_sets)
+        self.assertEqual(self.gram_simple.follow_sets, expected_follow_sets)
 
     def test_compute_first_sets_with_epsilons(self):
         self.gram_epsilon.compute_first_sets()
@@ -91,7 +91,7 @@ class TestGrammar(unittest.TestCase):
             'TERMP': {'*', '/', 'ε'}
         }
 
-        self.assertEqual(self.gram_epsilon.first_sets, expected_first_sets)
+        self.assertEqual(expected_first_sets, self.gram_epsilon.first_sets)
 
     def test_compute_follow_sets_with_epsilons(self):
         self.gram_epsilon.compute_follow_sets()
@@ -104,4 +104,21 @@ class TestGrammar(unittest.TestCase):
             'EXPR': {'$', ')'}
         }
 
-        self.assertEqual(self.gram_epsilon.follow_sets, expected_follow_sets)
+        self.assertEqual(expected_follow_sets, self.gram_epsilon.follow_sets)
+
+    def test_follow_computation_requires_trailer_algorithm(self):
+        g = Grammar("A")
+
+        g.add_production("A", ["B", "C", "D"])
+        g.add_production("B", ["b"])
+        g.add_production("C", [])  # nullable
+        g.add_production("D", ["d"])
+
+        g.compute_first_sets()
+        g.compute_follow_sets()
+
+        # Since C is nullable, B is effectively followed by D.
+        # Therefore FIRST(D) = {'d'} must be in FOLLOW(B).
+        expected_follow_b = {'d'}
+
+        self.assertEqual(expected_follow_b, g.follow_sets["B"])
