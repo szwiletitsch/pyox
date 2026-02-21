@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
-from typing import Any, Iterable
+from typing import Iterator
+
+from pyox.datatypes import LexToken, ParseNode
 
 
 class Parser(ABC):
@@ -8,7 +10,7 @@ class Parser(ABC):
     """
 
     @abstractmethod
-    def parse(self, tokens: Iterable[Any]) -> Any:
+    def parse(self, tokens: Iterator[LexToken]) -> ParseNode:
         """
         Parse a sequence of tokens and return an AST or result.
 
