@@ -1,30 +1,30 @@
 from collections import deque
 from dataclasses import dataclass
-from typing import TypeAlias, Iterator, Deque, Tuple
+from typing import TypeAlias, Iterator, Deque, Tuple, cast
 
 from pyox.datatypes import LexToken, ParseNode
 from pyox.errors import SLR1ConflictError, ParseError
 from pyox.grammar import Grammar
+from pyox.grammar import Production
 from pyox.parser import Parser
 
 
 @dataclass(frozen=True)
 class _ClosureItem:
-    lhs: str
-    rhs: tuple[str, ...]
+    production: Production
     position: int
 
     def move(self):
-        assert self.position < len(self.rhs)
-        return _ClosureItem(self.lhs, self.rhs, self.position + 1)
+        assert self.position < len(self.production.rhs)
+        return _ClosureItem(self.production, self.position + 1)
 
     def is_reducible(self):
-        return len(self.rhs) == self.position
+        return len(self.production.rhs) == self.position
 
     def __repr__(self):
-        symbols = list(self.rhs)
+        symbols = list(self.production.rhs)
         symbols.insert(self.position, ".")
-        return f"{self.lhs} -> {' '.join(symbols)}"
+        return f"{self.production.lhs} -> {' '.join(symbols)}"
 
 
 # type aliases
@@ -32,7 +32,7 @@ _ClosureItemSet: TypeAlias = set[_ClosureItem]
 _StateList: TypeAlias = list[_ClosureItemSet]
 _StateIdMap: TypeAlias = dict[frozenset[_ClosureItem], int]
 _GotoTable: TypeAlias = dict[int, dict[str, int]]
-_ActionValue: TypeAlias = tuple[str] | tuple[str, str, tuple[str, ...]] | tuple[str, int]
+_ActionValue: TypeAlias = tuple[str] | tuple[str, Production]
 _ActionTable: TypeAlias = dict[int, dict[str, _ActionValue]]
 
 
@@ -43,7 +43,7 @@ class SLR1Parser(Parser):
         self.grammar.compute_follow_sets()
 
         self._eof_symbol = "$"
-        self._fake_start = _ClosureItem(f"START{self._eof_symbol}", (self.grammar.start_symbol,), 0)
+        self._fake_start = _ClosureItem(Production(f"START{self._eof_symbol}", (self.grammar.start_symbol,)), 0)
         self.states, self.goto_table = self._build_states_and_goto_table()
         self.action_table = self._build_action_table(self.states, self.goto_table)
 
@@ -66,10 +66,10 @@ class SLR1Parser(Parser):
                 considered_items.add(item)
 
                 if not item.is_reducible():
-                    next_sym = item.rhs[item.position]
+                    next_sym = item.production.rhs[item.position]
                     if next_sym in self.grammar.nonterminals:
-                        for rhs in self.grammar.productions[next_sym]:
-                            new_item = _ClosureItem(next_sym, tuple(rhs), 0)
+                        for production in self.grammar.productions_by_lhs[next_sym]:
+                            new_item = _ClosureItem(production, 0)
                             closure.add(new_item)
 
             if length_b4 != len(closure):
@@ -94,10 +94,10 @@ class SLR1Parser(Parser):
             current_id = state_ids[frozenset(state)]
             goto_table[current_id] = {}
 
-            possible_next_syms = {closure.rhs[closure.position] for closure in state if not closure.is_reducible()}
+            possible_next_syms = {closure.production.rhs[closure.position] for closure in state if not closure.is_reducible()}
 
             for sym in possible_next_syms:
-                items = {closure.move() for closure in state if not closure.is_reducible() and closure.rhs[closure.position] == sym}
+                items = {closure.move() for closure in state if not closure.is_reducible() and closure.production.rhs[closure.position] == sym}
                 closure = self._closure(items)
                 frozen_closure = frozenset(closure)
 
@@ -125,27 +125,26 @@ class SLR1Parser(Parser):
         for i, state in enumerate(states):
             for item in state:
                 if not item.is_reducible():
-                    sym = item.rhs[item.position]
+                    sym = item.production.rhs[item.position]
                     if sym in self.grammar.terminals:
                         if sym in action_table[i]:
                             conflicts[i].add(sym)
-                        action_table[i][sym] = ("shift", goto_table[i][sym])
+                        action_table[i][sym] = ("shift",)
 
             for item in state:
                 if item.is_reducible():
-                    if item.lhs == self._fake_start.lhs:
+                    if item.production.lhs == self._fake_start.production.lhs:
                         if self._eof_symbol in action_table[i]:
                             conflicts[i].add(self._eof_symbol)
                         action_table[i][self._eof_symbol] = ("accept",)
                         continue
 
-                    for a in self.grammar.follow_sets[item.lhs]:
+                    for a in self.grammar.follow_sets[item.production.lhs]:
                         if a in action_table[i]:
                             conflicts[i].add(a)
                         action_table[i][a] = (
                             "reduce",
-                            item.lhs,
-                            item.rhs
+                            item.production
                         )
 
         conflicts = [(states[i], ts) for i, ts in conflicts.items() if ts != set()]
@@ -184,8 +183,11 @@ class SLR1Parser(Parser):
                     token = next(tokens, eof_token) # skip
 
                 case "reduce":
-                    lhs, rhs = action[1:]
+                    # ugly cast because static typechecker thinks action[1] could be a str
+                    production = cast(Production, cast(object, action[1]))
+                    lhs, rhs = production.lhs, production.rhs
                     node = ParseNode(lhs)
+                    node.production = production
 
                     children = []
                     for _ in range(len(rhs)):

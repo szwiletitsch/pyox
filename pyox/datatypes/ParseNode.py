@@ -2,6 +2,7 @@ from dataclasses import dataclass, field
 from typing import Any, Optional, List
 
 from pyox.datatypes import LexToken
+from pyox.grammar import Production
 
 
 @dataclass
@@ -12,6 +13,7 @@ class ParseNode:
     symbol: str
     children: List["ParseNode"] = field(default_factory=list)
     token: Optional[LexToken] = None
+    production: Optional[Production] = None
 
     def __repr__(self):
         return f"ParseNode({self.symbol})"
@@ -22,6 +24,8 @@ class ParseNode:
 
         if self.token:
             line += f" ({self.token.lexeme})"
+        else:
+            line += f" ({self.production})"
 
         lines = [line]
 
