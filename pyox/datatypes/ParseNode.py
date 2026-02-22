@@ -1,25 +1,37 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Optional, List
+
+from pyox.datatypes import LexToken
 
 
 @dataclass
 class ParseNode:
     """
     Represents a node in a parse tree for parsers.
-
-    Attributes:
-    -----------
-
     """
     symbol: str
-    children: Optional[List[Any]] = None
-    rule: Any = None        # todo revisit type
-    values: Any = None      # todo revisit type
+    children: List["ParseNode"] = field(default_factory=list)
+    token: Optional[LexToken] = None
 
-    def is_leaf(self) -> bool:
-        """Return True if the node has no children."""
-        return not self.children
+    def __repr__(self):
+        return f"ParseNode({self.symbol})"
 
-    def add_child(self, child: Any) -> None:
-        """Add a child to the parse tree."""
-        self.children.append(child)
+    def pretty(self, prefix="", is_last=True):
+        connector = "└── " if is_last else "├── "
+        line = prefix + connector + self.symbol
+
+        if self.token:
+            line += f" ({self.token.lexeme})"
+
+        lines = [line]
+
+        new_prefix = prefix + ("    " if is_last else "│   ")
+
+        for i, child in enumerate(self.children):
+            is_child_last = i == len(self.children) - 1
+            lines.append(child.pretty(new_prefix, is_child_last))
+
+        return "\n".join(lines)
+
+    def pretty_print(self):
+        print(self.pretty())

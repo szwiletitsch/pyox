@@ -5,3 +5,7 @@ class ParseError(Exception):
 class LL1ConflictError(Exception):
     """Base class for parser errors."""
     pass
+
+class SLR1ConflictError(Exception):
+    """Base class for parser errors."""
+    pass
