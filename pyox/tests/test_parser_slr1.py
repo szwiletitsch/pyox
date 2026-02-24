@@ -1,6 +1,6 @@
 import unittest
 
-from pyox.parser.parser_impl.slr_parser import SLR1Parser
+from pyox.parser import SLR1Parser
 from pyox.tests.test_parser_base import ParserTestBase
 
 
