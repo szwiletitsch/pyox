@@ -122,3 +122,66 @@ class TestGrammar(unittest.TestCase):
         expected_follow_b = {'d'}
 
         self.assertEqual(expected_follow_b, g.follow_sets["B"])
+
+    def test_first_of_sequence_simple(self):
+        self.gram_simple.compute_first_sets()
+
+        # FIRST([FACTOR, "+"]) should be FIRST(FACTOR)
+        result = self.gram_simple.first_of_sequence(["FACTOR", "+"])
+        self.assertEqual(result, {"id", "("})
+
+        # FIRST(["id"]) should be {"id"}
+        result = self.gram_simple.first_of_sequence(["id"])
+        self.assertEqual(result, {"id"})
+
+        # FIRST(["(", "EXPR", ")"]) should be {"("}
+        result = self.gram_simple.first_of_sequence(["(", "EXPR", ")"])
+        self.assertEqual(result, {"("})
+
+    def test_first_of_sequence_with_nullable(self):
+        self.gram_epsilon.compute_first_sets()
+
+        # EXPRP is nullable
+        self.assertIn("ε", self.gram_epsilon.first_sets["EXPRP"])
+
+        # FIRST(["EXPRP"]) should include ε
+        result = self.gram_epsilon.first_of_sequence(["EXPRP"])
+        self.assertEqual(result, {"+", "-", "ε"})
+
+        # FIRST(["EXPRP", "TERM"])
+        # Since EXPRP is nullable, FIRST should include FIRST(TERM)
+        result = self.gram_epsilon.first_of_sequence(["EXPRP", "TERM"])
+        self.assertEqual(result, {"+", "-", "(", "id"})
+
+        # FIRST([]) should be {"ε"} (empty sequence is nullable)
+        result = self.gram_epsilon.first_of_sequence([])
+        self.assertEqual(result, {"ε"})
+
+    def test_is_nullable_single_symbol(self):
+        self.gram_epsilon.compute_first_sets()
+
+        # EXPRP and TERMP are nullable
+        self.assertTrue(self.gram_epsilon.is_nullable("EXPRP"))
+        self.assertTrue(self.gram_epsilon.is_nullable("TERMP"))
+
+        # TERM and FACTOR are not nullable
+        self.assertFalse(self.gram_epsilon.is_nullable("TERM"))
+        self.assertFalse(self.gram_epsilon.is_nullable("FACTOR"))
+
+    def test_is_nullable_sequence(self):
+        self.gram_epsilon.compute_first_sets()
+
+        # EXPRP alone is nullable
+        self.assertTrue(self.gram_epsilon.is_nullable(["EXPRP"]))
+
+        # TERMP alone is nullable
+        self.assertTrue(self.gram_epsilon.is_nullable(["TERMP"]))
+
+        # EXPRP TERMP -> both nullable -> nullable
+        self.assertTrue(self.gram_epsilon.is_nullable(["EXPRP", "TERMP"]))
+
+        # EXPRP TERM -> TERM not nullable -> not nullable
+        self.assertFalse(self.gram_epsilon.is_nullable(["EXPRP", "TERM"]))
+
+        # Empty sequence -> nullable
+        self.assertTrue(self.gram_epsilon.is_nullable([]))

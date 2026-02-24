@@ -25,17 +25,14 @@ class LL1Parser(Parser):
         for production in self.grammar.productions:
             lhs, rhs = production.lhs, production.rhs
 
-            nullable = True
-            for symbol in rhs:
-                for first in self.grammar.first_sets[symbol] - {"ε"}:
-                    if table[lhs][first] is not None:
-                        conflicts[lhs].add(first)
-                    table[lhs][first] = production
-                if "ε" not in self.grammar.first_sets[symbol]:
-                    nullable = False
-                    break
+            first_rhs = self.grammar.first_of_sequence(list(rhs))
 
-            if nullable:
+            for terminal in first_rhs - {"ε"}:
+                if table[lhs][terminal] is not None:
+                    conflicts[lhs].add(terminal)
+                table[lhs][terminal] = production
+
+            if "ε" in first_rhs:
                 for follow in self.grammar.follow_sets[lhs]:
                     if table[lhs][follow] is not None:
                         conflicts[lhs].add(follow)

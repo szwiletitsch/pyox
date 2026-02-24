@@ -102,3 +102,22 @@ class Grammar:
                             trailer = self.first_sets[symbol] - {"ε"}
                     else:
                         trailer = {symbol}
+
+    def first_of_sequence(self, beta: List[str]) -> Set[str]:
+        first: Set[str] = set()
+        for symbol in beta:
+            symbol_first = self.first_sets[symbol]
+            first |= self.first_sets[symbol] - {"ε"}
+            if "ε" not in symbol_first:
+                break
+        else:
+            first.add("ε")
+        return first
+
+    def is_nullable(self, beta: List[str] | str) -> bool:
+        if type(beta) == str:
+            return "ε" in self.first_sets[beta]
+        elif type(beta) == list:
+            return "ε" in self.first_of_sequence(beta)
+        else:
+            raise TypeError(f"Expected 'str' or 'list[str]' got {beta} instead")
