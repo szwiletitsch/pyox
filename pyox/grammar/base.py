@@ -51,10 +51,10 @@ class Grammar:
                 self.nonterminals.add(symbol)
 
     def compute_first_sets(self):
-        self.first_sets = {symbol: set() for symbol in self.nonterminals | self.terminals}
+        self.first_sets = {symbol: set() for symbol in self.nonterminals | self.terminals | {self._eof_symbol}}
 
         # first of terminal x is {x}
-        for t in self.terminals:
+        for t in self.terminals | {self._eof_symbol}:
             self.first_sets[t].add(t)
 
         changed = True

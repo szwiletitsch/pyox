@@ -58,7 +58,8 @@ class TestGrammar(unittest.TestCase):
             '(': {'('},
             '/': {'/'},
             'id': {'id'},
-            'FACTOR': {'id', '('}
+            'FACTOR': {'id', '('},
+            '$' : {'$'}
         }
 
         self.assertEqual(expected_first_sets, self.gram_simple.first_sets)
@@ -88,7 +89,8 @@ class TestGrammar(unittest.TestCase):
             ')': {')'},
             'id': {'id'},
             '+': {'+'},
-            'TERMP': {'*', '/', 'ε'}
+            'TERMP': {'*', '/', 'ε'},
+            '$' : {'$'}
         }
 
         self.assertEqual(expected_first_sets, self.gram_epsilon.first_sets)
