@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Any, Optional, List
+from typing import Optional, List
 
 from pyox.datatypes import LexToken
 from pyox.grammar import Production
@@ -18,16 +18,23 @@ class ParseNode:
     def __repr__(self):
         return f"ParseNode({self.symbol})"
 
+    COLOR_RESET = "\033[0m"
+    COLOR_NONTERM = "\033[94m"  # nonterm with children     -> blue
+    COLOR_TERM = "\033[90m"     # nonterm without children  -> gray
+    COLOR_TOKEN = "\033[32m"    # terminal                  -> green
+
     def pretty(self, prefix="", is_last=True):
         connector = "└── " if is_last else "├── "
-        line = prefix + connector + self.symbol
+        line = prefix + connector
 
         if self.token:
-            line += f" ({self.token.lexeme})"
+            line += f"{self.COLOR_TOKEN}{self.symbol + " : '" + str(self.token.value) + "'"}{self.COLOR_RESET}"
+        elif self.children:
+            line += f"{self.COLOR_NONTERM}{self.symbol}{self.COLOR_RESET}"
         else:
-            line += f" ({self.production})"
+            line += f"{self.COLOR_TERM}{self.production}{self.COLOR_RESET}"
 
-        lines = [line]
+        lines = [line.replace("\n", "\\n")]
 
         new_prefix = prefix + ("    " if is_last else "│   ")
 
