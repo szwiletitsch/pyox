@@ -1,20 +1,27 @@
 from collections import defaultdict
 from dataclasses import dataclass, field
-from typing import Dict, List, Set, Optional, Tuple
+from typing import Dict, List, Set, Tuple, Callable
 
 
+@dataclass(frozen=True)
 class SemanticRule:
-    pass
-
+    # (node_index, attribute_name)
+    # 0 = LHS node, 1..n = RHS children
+    targets: Tuple[Tuple[int, str], ...]
+    # list of (node_index, attribute_name)
+    dependencies: Tuple[Tuple[int, str], ...]
+    action: Callable[[list], any]
+    action_str: str
 
 @dataclass(frozen=True)
 class Production:
     lhs: str
     rhs: Tuple[str, ...]
-    semantic_rules: Optional[Tuple[SemanticRule, ...]] = field(default_factory=tuple)
+    semantic_rules: Tuple[SemanticRule, ...] = field(default_factory=tuple)
 
     def __repr__(self) -> str:
-        return f"{self.lhs} -> {' '.join(self.rhs)}"
+        rhs_str = ' '.join(self.rhs) if len(self.rhs) > 0 else "ε"
+        return f"{self.lhs} -> {rhs_str}"
 
 
 class Grammar:
@@ -35,12 +42,33 @@ class Grammar:
 
         self._eof_symbol = "$"
 
-    def add_production(self, lhs: str, rhs: List[str], semantic=None) -> None:
+    def __repr__(self):
+        lines = [f"grammar (start: {self.start_symbol}): {{"]
+
+        indent = 2
+        productions_lines = [" " * indent + str(p) for p in self.productions]
+        max_len = max(map(len, productions_lines))
+
+        for i, (p_l, p) in enumerate(zip(productions_lines, self.productions)):
+            if p.semantic_rules:
+                actions = " && ".join(r.action_str for r in p.semantic_rules)
+                productions_lines[i] = p_l.ljust(max_len + indent) + f"=> {actions}"
+
+        lines.extend(productions_lines)
+        lines.append("}")
+
+        return "\n".join(lines)
+
+
+    def add_production(self, lhs: str, rhs: List[str], semantic: Tuple[SemanticRule, ...] | None = None) -> None:
         """
         Add a production rule: lhs -> rhs
         Example: add_production("Expr", ["Term", "+", "Expr"])
         """
-        production = Production(lhs, tuple(rhs), semantic)
+        if semantic is None:
+            production = Production(lhs, tuple(rhs))
+        else:
+            production = Production(lhs, tuple(rhs), semantic)
         self.productions.append(production)
         self.productions_by_lhs[lhs].append(production)
         self.nonterminals.add(lhs)
