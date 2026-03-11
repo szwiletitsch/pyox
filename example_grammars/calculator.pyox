@@ -1,0 +1,40 @@
+version 1.0.0
+
+
+section IMPORTS:
+
+# todo
+# import math
+
+section LEXER:
+
+# regex | token type ('_' for ignored symbols) | callable converter of lexeme to value
+
+/\+/                  plus
+/\-/                  minus
+/\*/                  times
+/\//                  divide
+/-?[1-9][0-9]*/       num     lambda x: int(x)
+/\s/                  _
+
+
+section PARSER:
+@traversal ast postorder
+START: EXPR                 => $0.value = $1.value && @ast print($0.value)
+     ;
+
+# Lowest precedence (+, -)
+EXPR: EXPR plus TERM        => $0.value = $1.value + $3.value
+    | EXPR minus TERM       => $0.value = $1.value - $3.value
+    | TERM                  => $0.value = $1.value
+    ;
+
+# Medium precedence (*, /)
+TERM: TERM times FACTOR     => $0.value = $1.value * $3.value
+    | TERM divide FACTOR    => $0.value = $1.value / $3.value
+    | FACTOR                => $0.value = $1.value
+    ;
+
+# Highest precedence (atoms)
+FACTOR: num                 => $0.value = $1.value
+    ;
