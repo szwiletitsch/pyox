@@ -9,3 +9,7 @@ class LL1ConflictError(Exception):
 class SLR1ConflictError(Exception):
     """Base class for SLR(1) parser conflict errors."""
     pass
+
+class PyOxGrammarSyntaxError(Exception):
+    """Base class for syntax errors in parsed PyOxGrammar files."""
+    pass
