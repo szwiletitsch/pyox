@@ -73,3 +73,14 @@ class ParseNode:
             if node.symbol == symbol:
                 return node
         return None
+
+    def child(self, symbol: str) -> "ParseNode":
+        for c in self.children:
+            if c.symbol == symbol:
+                return c
+        raise KeyError(f"{symbol} not found in {self.symbol}")
+
+    def children_of(self, symbol: str):
+        for c in self.children:
+            if c.symbol == symbol:
+                yield c
