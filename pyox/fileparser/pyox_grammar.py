@@ -14,6 +14,9 @@ _lexer = LongestInputMatchLexer([
     (re.compile(r'LEXER'), "lexer", str),
     (re.compile(r'PARSER'), "parser", str),
     (re.compile(r':'), "colon", str),
+    (re.compile(r'import'), "import", str),
+    (re.compile(r'from'), "from", str),
+    (re.compile(r'as'), "as", str),
     (re.compile(r'/((?![*+?])(?:[^\r\n\[/\\]|\\.|\[(?:[^\r\n\]\\]|\\.)*])+)/'), "regex", lambda x: re.compile(x[1:-1])),
     (re.compile(r'[a-z][a-z_]+'), "terminal", str),
     (re.compile(r'[A-Z][A-Z_]+'), "nonterminal", str),
@@ -23,6 +26,8 @@ _lexer = LongestInputMatchLexer([
     (re.compile(r'=> [^|;]*'), "actions", str),
     (re.compile(r';'), "semicolon", str),
     (re.compile(r'\|'), "pipe", str),
+    (re.compile(r'[a-zA-Z_][a-zA-Z0-9_]*'), "name", str),
+    (re.compile(r'[a-zA-Z_][a-zA-Z0-9_.]*'), "module", str),
     (re.compile(r'#[^\n]*'), "_", str),
     (re.compile(r'\s'), "_", str),
 ])
@@ -34,7 +39,20 @@ _g.add_production("VERSION", ["version", "version_num"])
 # imports
 _g.add_production("IMPORTS", ["IMPORTS_HEAD", "IMPORTS_BODY"])
 _g.add_production("IMPORTS_HEAD", ["section", "imports", "colon"])
-_g.add_production("IMPORTS_BODY", []) # todo
+_g.add_production("IMPORTS_BODY", ["IMPORT_STMTS"])
+_g.add_production("IMPORT_STMTS", ["IMPORT_STMT", "IMPORT_STMTS"])
+_g.add_production("IMPORT_STMTS", [])
+_g.add_production("IMPORT_STMT", ["import", "PACKAGE", "OPT_AS_ALIAS"])
+_g.add_production("IMPORT_STMT", ["from", "PACKAGE", "import", "NAME", "OPT_AS_ALIAS"])
+_g.add_production("PACKAGE", ["terminal"])
+_g.add_production("PACKAGE", ["nonterminal"])
+_g.add_production("PACKAGE", ["module"])
+_g.add_production("PACKAGE", ["name"])
+_g.add_production("NAME", ["terminal"])
+_g.add_production("NAME", ["nonterminal"])
+_g.add_production("NAME", ["name"])
+_g.add_production("OPT_AS_ALIAS", ["as", "terminal"])
+_g.add_production("OPT_AS_ALIAS", [])
 
 # lexer
 _g.add_production("LEXER", ["LEXER_HEAD", "LEXER_BODY"])

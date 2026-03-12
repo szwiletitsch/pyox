@@ -1,10 +1,60 @@
 import re
-from typing import Tuple, Callable, List
+import importlib
+from typing import Tuple, Callable, List, Dict, Any
+from types import ModuleType
 
 from pyox.datatypes import ParseNode
 from pyox.errors import PyOxGrammarSyntaxError
 from pyox.grammar import SemanticRule, Grammar
 from pyox.lexer.lexer_impl.longest_input_match_lexer import Rule as LexerRule
+
+PythonStub = ModuleType | Any
+
+
+def extract_version(version_root: ParseNode) -> Tuple[int, int, int]:
+    version_str = version_root.first("version_num").token.value
+    major, minor, patch = (int(x) for x in version_str.split("."))
+    return major, minor, patch
+
+
+def build_imports(imports_root: ParseNode) -> Dict[str, PythonStub]:
+    safe_globals: Dict[str, PythonStub] = {"__builtins__": {}}
+
+    for import_node in imports_root.find("IMPORT_STMT"):
+        match import_node.children[0].symbol:
+            case "import":
+                # import PACKAGE [as alias]
+                package = import_node.children[1].children[0].token.value
+                alias_node = import_node.children[2]
+                alias = alias_node.children[1].token.value if alias_node.children else package.split(".")[0]
+
+                # import the top-level module
+                try:
+                    module = importlib.import_module(package)
+                    safe_globals[alias] = module
+                except ModuleNotFoundError as e:
+                    line_no = import_node.children[0].token.lineno
+                    col_no = import_node.children[0].token.colno
+                    raise PyOxGrammarSyntaxError(f"{e} while parsing import statement at position {line_no}:{col_no}") from e
+
+
+            case "from":
+                # from PACKAGE import NAME [as alias]
+                package = import_node.children[1].children[0].token.value
+                name = import_node.children[3].children[0].token.value
+                alias_node = import_node.children[4]
+                alias = alias_node.children[1].token.value if alias_node.children else name
+
+                # import the module and get the attribute
+                try:
+                    module = importlib.import_module(package)
+                    safe_globals[alias] = getattr(module, name)
+                except ModuleNotFoundError as e:
+                    line_no = import_node.children[0].token.lineno
+                    col_no = import_node.children[0].token.colno
+                    raise PyOxGrammarSyntaxError(f"{e} while parsing import statement at position {line_no}:{col_no}") from e
+
+    return safe_globals
 
 
 def build_lexer_rules(lexer_root: ParseNode) -> List[LexerRule]:
@@ -21,8 +71,12 @@ def build_lexer_rules(lexer_root: ParseNode) -> List[LexerRule]:
 
     return lexer_rules
 
-def parse_actions_str(actions_str: str) -> tuple[SemanticRule]:
+
+def parse_actions_str(actions_str: str, safe_globals: Dict[str, PythonStub]=None) -> tuple[SemanticRule]:
     semantic_rules = []
+
+    if safe_globals is None:
+        safe_globals = {"__builtins__": {}}
 
     item_pattern = re.compile(r"\$(([1-9][0-9]*)|0)\.(\w*)")
 
@@ -44,10 +98,11 @@ def parse_actions_str(actions_str: str) -> tuple[SemanticRule]:
         def _repl(m):
             _idx = m.group(1)
             _attr = m.group(3)
-            return f"items[{_idx}].{_attr}"
+            return f'items[{_idx}].values["{_attr}"]'
 
         try:
-            action = eval(f"lambda items: {item_pattern.sub(_repl, act_rhs)}")
+            repl_action_str = f"lambda items: {item_pattern.sub(_repl, act_rhs)}"
+            action = eval(repl_action_str, safe_globals)
         except SyntaxError:
             raise PyOxGrammarSyntaxError(f"Syntax error in action definition: '{action_str}'")
 
@@ -63,7 +118,7 @@ def parse_actions_str(actions_str: str) -> tuple[SemanticRule]:
     return tuple(semantic_rules)
 
 
-def build_grammar(parser_root: ParseNode) -> Grammar:
+def build_grammar(parser_root: ParseNode, safe_globals: Dict[str, PythonStub]=None) -> Grammar:
     grammar: Grammar = Grammar("START")
 
     for rule_node in parser_root.find("PARSER_RULE"):
@@ -84,7 +139,7 @@ def build_grammar(parser_root: ParseNode) -> Grammar:
                         actions_str = actions_tok.value
                         actions_str = actions_str[2:] # remove leading '=>'
                         try:
-                            semantic_rules = parse_actions_str(actions_str)
+                            semantic_rules = parse_actions_str(actions_str, safe_globals)
                         except PyOxGrammarSyntaxError as e:
                             raise PyOxGrammarSyntaxError(
                                 f"{e} while parsing rule {lhs} -> {' '.join(rhs)} at position {actions_tok.lineno}:{actions_tok.colno}"

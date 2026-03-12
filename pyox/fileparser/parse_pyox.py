@@ -1,20 +1,18 @@
-from pyox.fileparser.ir_builder import build_lexer_rules, build_grammar
+from pyox.fileparser.ir_builder import build_lexer_rules, build_grammar, build_imports, extract_version
 from pyox.fileparser.pyox_grammar import parse
 
 
 def parse_pyox(source):
     parse_tree = parse(source)
 
-    version, imports, lexer_root, parser_root = parse_tree.children
+    version_root, imports_root, lexer_root, parser_root = parse_tree.children
 
-    # version_root.pretty_print() # todo
-    # imports_root.pretty_print() # todo
+    version = extract_version(version_root)
+    safe_globals = build_imports(imports_root)
+    lexer_rules = build_lexer_rules(lexer_root) # todo use safe globals for evaluating lexer converter
+    grammar = build_grammar(parser_root, safe_globals)
 
-    # lexer_root.pretty_print()
-    lexer_rules = build_lexer_rules(lexer_root)
-    grammar = build_grammar(parser_root)
-
-    return lexer_rules, grammar
+    return version, safe_globals, lexer_rules, grammar
 
 
 
@@ -28,7 +26,10 @@ if __name__ == '__main__':
             source = f.read()
 
 
-        lexer_rules, grammar = parse_pyox(source)
+        version, safe_globals, lexer_rules, grammar = parse_pyox(source)
+
+        print(version)
+        print(safe_globals)
         print(lexer_rules)
         print(grammar)
 
