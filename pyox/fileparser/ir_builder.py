@@ -1,22 +1,23 @@
 import re
-from typing import Tuple
+from typing import Tuple, Callable, List
 
 from pyox.datatypes import ParseNode
 from pyox.errors import PyOxGrammarSyntaxError
 from pyox.grammar import SemanticRule, Grammar
+from pyox.lexer.lexer_impl.longest_input_match_lexer import Rule as LexerRule
 
 
-def build_lexer_rules(lexer_root: ParseNode):
-    lexer_rule_nodes = lexer_root.find("LEXER_RULE")
+def build_lexer_rules(lexer_root: ParseNode) -> List[LexerRule]:
+    lexer_rule_nodes = lexer_root.find("LEXER_RULE") # flatten LEXER_RULE nodes in preorder
 
-    lexer_rules = [
-        (
-            node.children[0].token.value,
-            node.children[1].children[0].token.value,
-            node.children[2].children[0].token.value if node.children[2].children else str
-        )
-        for node in lexer_rule_nodes
-    ]
+    lexer_rules: List[LexerRule] = []
+    for node in lexer_rule_nodes:
+        regex: re.Pattern = node.children[0].token.value
+        name: str = node.children[1].children[0].token.value
+        converter_node = node.children[2]
+        converter: Callable[[str], any] = converter_node.children[0].token.value if converter_node.children else str
+
+        lexer_rules.append((regex, name, converter))
 
     return lexer_rules
 
