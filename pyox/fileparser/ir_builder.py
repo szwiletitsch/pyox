@@ -63,18 +63,18 @@ def parse_actions_str(actions_str: str) -> tuple[SemanticRule]:
     return tuple(semantic_rules)
 
 
-def build_grammar(parser_root: ParseNode):
-    traversals = []
-
-    grammar = Grammar("START")
+def build_grammar(parser_root: ParseNode) -> Grammar:
+    grammar: Grammar = Grammar("START")
 
     for rule_node in parser_root.find("PARSER_RULE"):
         match rule_node.children[0].symbol:
-            case "@traversal":
-                traversals.append((rule_node.children[1].children[0].token.value, rule_node.children[2].children[0].token.value))
+            case "@traversal":      # traversal definition
+                traversal_name: str = rule_node.children[1].children[0].token.value
+                traversal_type: str = rule_node.children[2].children[0].token.value
+                grammar.traversals.append((traversal_name, traversal_type))
 
-            case "nonterminal":
-                lhs = rule_node.children[0].token.value
+            case "nonterminal":     # production definition
+                lhs: str = rule_node.children[0].token.value
                 for prod_node in rule_node.children[2].find("PRODUCTION"):
                     rhs = [sym_node.children[0].token.value for sym_node in prod_node.find("SYMBOL")]
 
@@ -82,13 +82,13 @@ def build_grammar(parser_root: ParseNode):
                     actions_tok = prod_node.children[1].children[0].token if prod_node.children[1].children else None
                     if actions_tok:
                         actions_str = actions_tok.value
-                        actions_str = actions_str[2:].strip()
+                        actions_str = actions_str[2:] # remove leading '=>'
                         try:
                             semantic_rules = parse_actions_str(actions_str)
                         except PyOxGrammarSyntaxError as e:
                             raise PyOxGrammarSyntaxError(
                                 f"{e} while parsing rule {lhs} -> {' '.join(rhs)} at position {actions_tok.lineno}:{actions_tok.colno}"
-                            ) from None
+                            ) from e
 
                     grammar.add_production(lhs, rhs, semantic_rules)
 

@@ -36,6 +36,7 @@ class Grammar:
         self.productions_by_lhs: Dict[str, List[Production]] = defaultdict(list)
         self.terminals: Set[str] = set()
         self.nonterminals: Set[str] = set()
+        self.traversals: List[Tuple[str, str]] = []  # mapping name -> "preorder" | "postorder"
         self.first_sets: Dict[str, Set[str]] = {}
         self.follow_sets: Dict[str, Set[str]] = {}
         self.nullable: Set[str] = set()
