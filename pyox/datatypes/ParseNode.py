@@ -1,8 +1,14 @@
 from dataclasses import dataclass, field
-from typing import Optional, List
+from enum import Enum
+from typing import Optional, List, Iterator
 
 from pyox.datatypes import LexToken
 from pyox.grammar import Production
+
+
+class WalkOrder(Enum):
+    PRE = "pre"
+    POST = "post"
 
 
 @dataclass
@@ -46,3 +52,24 @@ class ParseNode:
 
     def pretty_print(self):
         print(self.pretty())
+
+    def walk(self, order: WalkOrder=WalkOrder.PRE) -> Iterator["ParseNode"]:
+        if order is WalkOrder.PRE:
+            yield self
+
+        for child in self.children:
+            yield from child.walk(order)
+
+        if order is WalkOrder.POST:
+            yield self
+
+    def find(self, symbol: str, order: WalkOrder=WalkOrder.PRE) -> Iterator["ParseNode"]:
+        for node in self.walk(order=order):
+            if node.symbol == symbol:
+                yield node
+
+    def first(self, symbol: str, order=WalkOrder.PRE) -> "ParseNode | None":
+        for node in self.walk(order=order):
+            if node.symbol == symbol:
+                return node
+        return None
