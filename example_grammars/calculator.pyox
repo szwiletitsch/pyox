@@ -1,10 +1,10 @@
-version 1.0.0
+# Example grammar for mathematical expressions without parenthesis
 
+version 1.0.0
 
 section IMPORTS:
 
-# todo
-# import math
+from math import pow as power
 
 section LEXER:
 
@@ -14,27 +14,33 @@ section LEXER:
 /\-/                  minus
 /\*/                  times
 /\//                  divide
-/-?[1-9][0-9]*/       num     lambda x: int(x)
+/\^/                  exp
+/(-?[1-9][0-9]*)|0/   num       lambda x: int(x)      # todo in the future imports shall be usable here too
 /\s/                  _
 
 
 section PARSER:
 @traversal ast postorder
-START: EXPR                 => $0.value = $1.value && @ast print($0.value)
+START: EXPR                     => $0.value, $0.final = ($1.value, $1.value) && @ast print($0.final)
      ;
 
 # Lowest precedence (+, -)
-EXPR: EXPR plus TERM        => $0.value = $1.value + $3.value
-    | EXPR minus TERM       => $0.value = $1.value - $3.value
-    | TERM                  => $0.value = $1.value
+EXPR: EXPR plus TERM            => $0.value = $1.value + $3.value
+    | EXPR minus TERM           => $0.value = $1.value - $3.value
+    | TERM                      => $0.value = $1.value
     ;
 
 # Medium precedence (*, /)
-TERM: TERM times FACTOR     => $0.value = $1.value * $3.value
-    | TERM divide FACTOR    => $0.value = $1.value / $3.value
-    | FACTOR                => $0.value = $1.value
+TERM: TERM times EXPONENT       => $0.value = $1.value * $3.value
+    | TERM divide EXPONENT      => $0.value = $1.value / $3.value
+    | EXPONENT                  => $0.value = $1.value
+    ;
+
+# High precedence (^)
+EXPONENT: NUM exp EXPONENT      => $0.value = power($1.value, $3.value)
+    | NUM                       => $0.value = $1.value
     ;
 
 # Highest precedence (atoms)
-FACTOR: num                 => $0.value = $1.value
+NUM: num                        => $0.value = $1.value
     ;
