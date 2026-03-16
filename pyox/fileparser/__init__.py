@@ -1,3 +1,3 @@
-from pyox.fileparser.parse_pyox import parse_pyox
+from pyox.fileparser.parse_pyox import generate_fragments
 
-__all__ = ["parse_pyox"]
+__all__ = ["generate_fragments"]
