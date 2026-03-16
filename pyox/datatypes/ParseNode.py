@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Optional, List, Iterator
+from typing import Optional, List, Iterator, Dict
 
 from pyox.datatypes import LexToken
 from pyox.grammar import Production
@@ -20,6 +20,7 @@ class ParseNode:
     children: List["ParseNode"] = field(default_factory=list)
     token: Optional[LexToken] = None
     production: Optional[Production] = None
+    values: Dict[str, any] = field(default_factory=dict)
 
     def __repr__(self):
         return f"ParseNode({self.symbol})"
@@ -84,3 +85,9 @@ class ParseNode:
         for c in self.children:
             if c.symbol == symbol:
                 yield c
+
+    def __hash__(self):
+        return id(self)
+
+    def __eq__(self, other):
+        return self is other
