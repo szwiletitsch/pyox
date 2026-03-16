@@ -23,7 +23,7 @@ _lexer = LongestInputMatchLexer([
     (re.compile(r'lambda [^\n]*'), "lambda", lambda x: eval(x)),
     (re.compile(r'_'), "ingored", str),
     (re.compile(r'@traversal'), "@traversal", str),
-    (re.compile(r'=> [^|;]*'), "actions", str),
+    (re.compile(r'=>[^|;]*'), "actions", str),
     (re.compile(r';'), "semicolon", str),
     (re.compile(r'\|'), "pipe", str),
     (re.compile(r'[a-zA-Z_][a-zA-Z0-9_]*'), "name", str),
