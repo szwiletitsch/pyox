@@ -46,6 +46,7 @@ class LRParser(Parser):
                     next_state = self._goto_table[state_id][token.type]
 
                     node = ParseNode(token.type)
+                    node.values["value"] = token.value
                     node.token = token
 
                     stack.append((next_state, node))

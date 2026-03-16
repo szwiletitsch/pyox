@@ -85,6 +85,7 @@ class LL1Parser(Parser):
                     raise ParseError(f"Unexpected token '{token.lexeme if token else 'EOF'}' at position {token.lineno}:{token.colno}. Expected '{stack_sym}'")
 
                 node.token = token
+                node.values["value"] = token.value
                 token = next(tokens, eof_token) # skip token
 
             elif stack_sym == self._eof_symbol:
