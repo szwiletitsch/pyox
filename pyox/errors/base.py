@@ -13,3 +13,7 @@ class SLR1ConflictError(Exception):
 class PyOxGrammarSyntaxError(Exception):
     """Base class for syntax errors in parsed PyOxGrammar files."""
     pass
+
+class PyOxAttributeEvaluationError(Exception):
+    """Base class for PyOx attribute evaluation errors."""
+    pass
