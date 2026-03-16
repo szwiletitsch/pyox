@@ -18,6 +18,7 @@ class LRParser(Parser):
     """
 
     def __init__(self, action_table: ActionTable, goto_table: GotoTable, eof_symbol: str = "$"):
+        super().__init__()
         self._action_table = action_table
         self._goto_table = goto_table
         self._eof_symbol = eof_symbol

@@ -9,6 +9,7 @@ from pyox.parser import Parser
 
 class LL1Parser(Parser):
     def __init__(self, grammar: Grammar):
+        super().__init__()
         self.grammar = grammar
         self.grammar.compute_first_sets()
         self.grammar.compute_follow_sets()

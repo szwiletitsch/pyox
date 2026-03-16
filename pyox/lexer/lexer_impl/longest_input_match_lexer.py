@@ -26,6 +26,7 @@ class LongestInputMatchLexer(Lexer):
     """
 
     def __init__(self, rules: Iterable[Rule]) -> None:
+        super().__init__()
         self._rules: List[Rule] = list(rules)
 
     def tokenize(self, source: str, include_ignored: bool = False) -> Iterator[LexToken]:
